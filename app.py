@@ -98,4 +98,120 @@ Réponds en français avec clarté et précision professionnelle."""
 
 @app.route('/api/plagiarism', methods=['POST'])
 def check_plagiarism():
-    """
+    """كشف السرقة الأدبية والمقارنة"""
+    try:
+        data = request.get_json()
+        text1 = data.get('text1', '').strip()
+        text2 = data.get('text2', '').strip()
+        
+        if not text1 or not text2:
+            return jsonify({'error': 'Deux textes requis', 'success': False}), 400
+        
+        result = call_ai([
+            {
+                'role': 'system',
+                'content': 'Tu es un expert en détection de plagiat et analyse comparative de textes. Tu identifies les similitudes avec précision et objectivité.'
+            },
+            {
+                'role': 'user',
+                'content': f"""Compare ces deux textes français et analyse leurs similitudes:
+
+**Texte 1:**
+{text1}
+
+**Texte 2:**
+{text2}
+
+**Analyse détaillée:**
+
+1. **Score de similarité**: Donne un pourcentage précis (0-100%) avec justification
+2. **Similitudes lexicales**: Liste les mots, expressions et phrases identiques ou très similaires
+3. **Similitudes structurelles**: Compare la structure syntaxique, les schémas de phrases, et l'organisation
+4. **Passages problématiques**: Cite les passages qui présentent des similitudes suspectes
+5. **Différences notables**: Relève les différences significatives dans le style et le contenu
+6. **Analyse du contexte**: Évalue si les similitudes peuvent être naturelles ou intentionnelles
+7. **Conclusion finale**: Détermine le niveau de plagiat (Aucun/Faible/Modéré/Élevé/Critique)
+
+Sois précis, objectif et professionnel. Réponds en français."""
+            }
+        ])
+        
+        return jsonify({'result': result, 'success': True})
+        
+    except Exception as e:
+        print(f'Erreur plagiat: {str(e)}')
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/api/improve', methods=['POST'])
+def improve_text():
+    """تحسين وتصحيح النص"""
+    try:
+        data = request.get_json()
+        text = data.get('text', '').strip()
+        
+        if not text:
+            return jsonify({'error': 'Texte requis', 'success': False}), 400
+        
+        result = call_ai([
+            {
+                'role': 'system',
+                'content': 'Tu es un expert correcteur et rédacteur français. Tu améliores les textes tout en préservant leur sens original.'
+            },
+            {
+                'role': 'user',
+                'content': f"""Améliore ce texte français de manière complète:
+
+**Texte original:**
+{text}
+
+**Instructions détaillées:**
+1. Corrige toutes les erreurs grammaticales, orthographiques, et de conjugaison
+2. Enrichis le vocabulaire avec des synonymes appropriés et variés
+3. Améliore la structure des phrases pour plus de fluidité et d'élégance
+4. Renforce la cohérence et les transitions entre les idées
+5. Respecte absolument le sens et l'intention originale du texte
+6. Adapte le niveau de langue de manière cohérente et appropriée
+
+**Format de réponse obligatoire:**
+
+📝 **TEXTE AMÉLIORÉ:**
+[Écris ici le texte entièrement corrigé et amélioré]
+
+✨ **AMÉLIORATIONS PRINCIPALES:**
+[Liste détaillée et numérotée des corrections et améliorations apportées avec explications]
+
+📊 **STATISTIQUES:**
+[Nombre total de corrections grammaticales, enrichissements lexicaux, améliorations structurelles]
+
+💡 **RECOMMANDATIONS:**
+[Conseils pour améliorer davantage la qualité rédactionnelle]
+
+Réponds en français de manière structurée et professionnelle."""
+            }
+        ])
+        
+        return jsonify({'result': result, 'success': True})
+        
+    except Exception as e:
+        print(f'Erreur amélioration: {str(e)}')
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/health')
+def health():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'ok',
+        'api_configured': bool(OPENROUTER_API_KEY),
+        'model': MODEL,
+        'provider': 'OpenRouter + Meta Llama 3.2'
+    })
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    print('=' * 70)
+    print('🚀 AnalyseLingFR Starting...')
+    print('🤖 Powered by Meta Llama 3.2 via OpenRouter')
+    print(f'📡 Port: {port}')
+    print(f'🔑 OpenRouter API: {"✅ Configured" if OPENROUTER_API_KEY else "❌ Missing"}')
+    print('=' * 70)
+    app.run(host='0.0.0.0', port=port, debug=False)
