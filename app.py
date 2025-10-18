@@ -1,32 +1,52 @@
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import os
-import google.generativeai as genai
+import requests
 
 app = Flask(__name__)
 CORS(app)
 
 # قراءة المفتاح من Environment Variable
-GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
+API_URL = 'https://openrouter.ai/api/v1/chat/completions'
+MODEL = 'deepseek/deepseek-r1:free'
 
-# تكوين Google AI
-if GOOGLE_API_KEY:
-    genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')  # ✅ محدّث!
-else:
-    model = None
-    print("⚠️ GOOGLE_API_KEY not configured!")
-
-def call_ai(prompt):
-    """استدعاء Google Gemini API"""
-    if not GOOGLE_API_KEY or not model:
-        raise Exception('⚠️ Clé API Google non configurée')
+def call_ai(messages):
+    """استدعاء OpenRouter API"""
+    if not OPENROUTER_API_KEY:
+        raise Exception('⚠️ Clé API OpenRouter non configurée')
     
     try:
-        response = model.generate_content(prompt)
-        return response.text
+        response = requests.post(
+            API_URL,
+            headers={
+                'Authorization': f'Bearer {OPENROUTER_API_KEY}',
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://analyseling-fr.up.railway.app',
+                'X-Title': 'AnalyseLingFR'
+            },
+            json={
+                'model': MODEL,
+                'messages': messages,
+                'max_tokens': 2000,
+                'temperature': 0.7
+            },
+            timeout=60
+        )
+        
+        if response.status_code != 200:
+            error_text = response.text
+            raise Exception(f'Erreur API {response.status_code}: {error_text}')
+        
+        data = response.json()
+        return data['choices'][0]['message']['content']
+        
+    except requests.exceptions.Timeout:
+        raise Exception('⏱️ Délai d\'attente dépassé. Réessayez.')
+    except requests.exceptions.RequestException as e:
+        raise Exception(f'❌ Erreur de connexion: {str(e)}')
     except Exception as e:
-        raise Exception(f'Erreur Google AI: {str(e)}')
+        raise Exception(f'Erreur: {str(e)}')
 
 @app.route('/')
 def index():
@@ -43,24 +63,32 @@ def analyze_text():
         if not text:
             return jsonify({'error': 'Texte requis', 'success': False}), 400
         
-        prompt = f"""Tu es un expert en linguistique française. Analyse ce texte en détail:
+        result = call_ai([
+            {
+                'role': 'system',
+                'content': 'Tu es un expert en linguistique française spécialisé dans l\'analyse de textes.'
+            },
+            {
+                'role': 'user',
+                'content': f"""Analyse ce texte français de manière détaillée:
 
-**Texte à analyser:**
+**Texte:**
 {text}
 
 **Fournis une analyse structurée:**
 
 1. **Thème principal**: Identifie le sujet central
-2. **Ton et style**: Caractérise le ton (formel, informel, neutre...)
-3. **Richesse du vocabulaire**: Évalue la diversité lexicale
+2. **Ton et style**: Caractérise le ton (formel, informel, neutre, lyrique...)
+3. **Richesse du vocabulaire**: Évalue la diversité lexicale et le niveau de langue
 4. **Structure et cohérence**: Analyse l'organisation du texte
-5. **Points forts**: Mets en valeur les qualités du texte
+5. **Points forts**: Mets en valeur les qualités linguistiques
 6. **Suggestions d'amélioration**: Propose des améliorations concrètes
 7. **Niveau de langue**: Détermine le registre (familier, courant, soutenu, académique)
 
 Réponds en français de manière claire et professionnelle."""
-
-        result = call_ai(prompt)
+            }
+        ])
+        
         return jsonify({'result': result, 'success': True})
         
     except Exception as e:
@@ -78,7 +106,14 @@ def check_plagiarism():
         if not text1 or not text2:
             return jsonify({'error': 'Deux textes requis', 'success': False}), 400
         
-        prompt = f"""Tu es un expert en détection de plagiat. Compare ces deux textes français:
+        result = call_ai([
+            {
+                'role': 'system',
+                'content': 'Tu es un expert en détection de plagiat et analyse comparative de textes.'
+            },
+            {
+                'role': 'user',
+                'content': f"""Compare ces deux textes français et détecte les similitudes:
 
 **Texte 1:**
 {text1}
@@ -86,18 +121,19 @@ def check_plagiarism():
 **Texte 2:**
 {text2}
 
-**Fournis une analyse complète:**
+**Analyse:**
 
-1. **Score de similarité**: Donne un pourcentage précis (0-100%)
-2. **Similitudes lexicales**: Identifie les mots et expressions identiques ou similaires
-3. **Similitudes structurelles**: Compare la structure des phrases et paragraphes
-4. **Passages similaires**: Cite les passages qui se ressemblent le plus
+1. **Score de similarité**: Pourcentage précis (0-100%)
+2. **Similitudes lexicales**: Mots et expressions identiques ou similaires
+3. **Similitudes structurelles**: Structure des phrases et paragraphes
+4. **Passages similaires**: Cite les passages qui se ressemblent
 5. **Différences notables**: Relève les différences significatives
-6. **Conclusion**: Détermine le risque de plagiat (Faible/Modéré/Élevé/Critique)
+6. **Conclusion**: Niveau de plagiat (Faible/Modéré/Élevé/Critique)
 
-Sois précis, objectif et détaillé. Réponds en français."""
-
-        result = call_ai(prompt)
+Sois précis et objectif. Réponds en français."""
+            }
+        ])
+        
         return jsonify({'result': result, 'success': True})
         
     except Exception as e:
@@ -114,32 +150,40 @@ def improve_text():
         if not text:
             return jsonify({'error': 'Texte requis', 'success': False}), 400
         
-        prompt = f"""Tu es un expert en amélioration de textes français. Améliore ce texte:
+        result = call_ai([
+            {
+                'role': 'system',
+                'content': 'Tu es un expert en correction et amélioration de textes français.'
+            },
+            {
+                'role': 'user',
+                'content': f"""Améliore ce texte français:
 
 **Texte original:**
 {text}
 
 **Instructions:**
-1. Corrige toutes les erreurs grammaticales et orthographiques
+1. Corrige toutes les erreurs (grammaire, orthographe, conjugaison)
 2. Enrichis le vocabulaire avec des synonymes appropriés
-3. Améliore la structure et la fluidité des phrases
-4. Respecte le sens et l'intention originale du texte
+3. Améliore la structure et la fluidité
+4. Respecte le sens original
 5. Adapte le niveau de langue de manière cohérente
 
-**Format de réponse:**
+**Format:**
 
 📝 **TEXTE AMÉLIORÉ:**
-[Écris ici le texte corrigé et amélioré complet]
+[Texte corrigé complet]
 
-✨ **PRINCIPALES AMÉLIORATIONS:**
-[Liste les améliorations apportées avec explications claires]
+✨ **AMÉLIORATIONS APPORTÉES:**
+[Liste détaillée des corrections et améliorations]
 
 📊 **STATISTIQUES:**
-[Nombre de corrections grammaticales, enrichissements lexicaux, etc.]
+[Nombre de corrections]
 
 Réponds en français de manière structurée."""
-
-        result = call_ai(prompt)
+            }
+        ])
+        
         return jsonify({'result': result, 'success': True})
         
     except Exception as e:
@@ -151,16 +195,16 @@ def health():
     """Health check endpoint"""
     return jsonify({
         'status': 'ok',
-        'api_configured': bool(GOOGLE_API_KEY),
-        'model': 'gemini-pro'
+        'api_configured': bool(OPENROUTER_API_KEY),
+        'model': MODEL
     })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print('=' * 60)
     print('🚀 AnalyseLingFR Starting...')
-    print('🤖 Powered by Google Gemini Pro')
+    print('🤖 Powered by DeepSeek AI via OpenRouter')
     print(f'📡 Port: {port}')
-    print(f'🔑 Google API: {"✅ Configured" if GOOGLE_API_KEY else "❌ Missing"}')
+    print(f'🔑 API Key: {"✅ Configured" if OPENROUTER_API_KEY else "❌ Missing"}')
     print('=' * 60)
     app.run(host='0.0.0.0', port=port, debug=False)
