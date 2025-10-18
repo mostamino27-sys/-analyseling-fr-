@@ -1,43 +1,31 @@
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 import os
-import requests
+import google.generativeai as genai
 
 app = Flask(__name__)
 CORS(app)
 
 # قراءة المفتاح من Environment Variable
-OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
-API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-MODEL = 'deepseek/deepseek-r1:free'
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 
-def call_ai(messages):
-    """استدعاء OpenRouter API"""
-    if not OPENROUTER_API_KEY:
-        raise Exception('Clé API non configurée')
+# تكوين Google AI
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+else:
+    model = None
 
-    response = requests.post(
-        API_URL,
-        headers={
-            'Authorization': f'Bearer {OPENROUTER_API_KEY}',
-            'Content-Type': 'application/json',
-            'HTTP-Referer': 'https://analyseling-fr.up.railway.app',
-            'X-Title': 'AnalyseLingFR'
-        },
-        json={
-            'model': MODEL,
-            'messages': messages,
-            'max_tokens': 2000,
-            'temperature': 0.7
-        },
-        timeout=30
-    )
-
-    if response.status_code != 200:
-        raise Exception(f'Erreur API: {response.status_code}')
-
-    data = response.json()
-    return data['choices'][0]['message']['content']
+def call_ai(prompt):
+    """استدعاء Google Gemini API"""
+    if not GOOGLE_API_KEY or not model:
+        raise Exception('⚠️ Clé API Google non configurée')
+    
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        raise Exception(f'Erreur Google AI: {str(e)}')
 
 @app.route('/')
 def index():
@@ -50,36 +38,29 @@ def analyze_text():
     try:
         data = request.get_json()
         text = data.get('text', '').strip()
-
+        
         if not text:
             return jsonify({'error': 'Texte requis', 'success': False}), 400
+        
+        prompt = f"""Tu es un expert en linguistique française. Analyse ce texte en détail:
 
-        result = call_ai([
-            {
-                'role': 'system',
-                'content': 'Tu es un expert en linguistique française. Tu analyses les textes avec précision.'
-            },
-            {
-                'role': 'user',
-                'content': f"""Analyse linguistique détaillée de ce texte français:
-
-1. **Thème principal**: Identifie le sujet
-2. **Ton et style**: Caractérise le ton
-3. **Richesse vocabulaire**: Évalue la diversité
-4. **Structure**: Analyse l'organisation
-5. **Points forts**: Mets en valeur
-6. **Suggestions**: Propose des améliorations
-7. **Niveau de langue**: Détermine le registre
-
-Texte à analyser:
+**Texte à analyser:**
 {text}
 
-Fournis une analyse structurée en français."""
-            }
-        ])
+**Fournis une analyse structurée:**
+1. **Thème principal**: Identifie le sujet central
+2. **Ton et style**: Caractérise le ton (formel, informel, neutre...)
+3. **Richesse du vocabulaire**: Évalue la diversité lexicale
+4. **Structure et cohérence**: Analyse l'organisation
+5. **Points forts**: Mets en valeur les qualités
+6. **Suggestions d'amélioration**: Propose des améliorations concrètes
+7. **Niveau de langue**: Détermine le registre (familier, courant, soutenu, académique)
 
+Réponds en français de manière claire et professionnelle."""
+
+        result = call_ai(prompt)
         return jsonify({'result': result, 'success': True})
-
+        
     except Exception as e:
         print(f'Erreur analyse: {str(e)}')
         return jsonify({'error': str(e), 'success': False}), 500
@@ -91,18 +72,11 @@ def check_plagiarism():
         data = request.get_json()
         text1 = data.get('text1', '').strip()
         text2 = data.get('text2', '').strip()
-
+        
         if not text1 or not text2:
             return jsonify({'error': 'Deux textes requis', 'success': False}), 400
-
-        result = call_ai([
-            {
-                'role': 'system',
-                'content': 'Tu es un expert en détection de plagiat.'
-            },
-            {
-                'role': 'user',
-                'content': f"""Compare ces deux textes français:
+        
+        prompt = f"""Tu es un expert en détection de plagiat. Compare ces deux textes français:
 
 **Texte 1:**
 {text1}
@@ -110,18 +84,19 @@ def check_plagiarism():
 **Texte 2:**
 {text2}
 
-Fournis:
-1. Score de similarité (0-100%)
-2. Similitudes détectées
-3. Passages similaires
-4. Conclusion sur plagiat
+**Fournis une analyse complète:**
+1. **Score de similarité**: Donne un pourcentage (0-100%)
+2. **Similitudes lexicales**: Identifie les mots et expressions identiques
+3. **Similitudes structurelles**: Compare la structure des phrases
+4. **Passages similaires**: Cite les passages qui se ressemblent
+5. **Différences notables**: Relève les différences significatives
+6. **Conclusion**: Détermine le risque de plagiat (Faible/Modéré/Élevé/Critique)
 
-Analyse en français."""
-            }
-        ])
+Réponds en français de manière objective et détaillée."""
 
+        result = call_ai(prompt)
         return jsonify({'result': result, 'success': True})
-
+        
     except Exception as e:
         print(f'Erreur plagiat: {str(e)}')
         return jsonify({'error': str(e), 'success': False}), 500
@@ -132,39 +107,38 @@ def improve_text():
     try:
         data = request.get_json()
         text = data.get('text', '').strip()
-
+        
         if not text:
             return jsonify({'error': 'Texte requis', 'success': False}), 400
-
-        result = call_ai([
-            {
-                'role': 'system',
-                'content': 'Tu es un expert en amélioration de textes français.'
-            },
-            {
-                'role': 'user',
-                'content': f"""Améliore ce texte français:
+        
+        prompt = f"""Tu es un expert en amélioration de textes français. Améliore ce texte:
 
 **Texte original:**
 {text}
 
-Instructions:
-1. Corrige les erreurs
-2. Enrichis le vocabulaire
-3. Améliore la structure
-4. Garde le sens original
+**Instructions:**
+1. Corrige toutes les erreurs grammaticales et orthographiques
+2. Enrichis le vocabulaire avec des synonymes appropriés
+3. Améliore la structure et la fluidité des phrases
+4. Respecte le sens et l'intention originale
+5. Adapte le niveau de langue de manière cohérente
 
-Format:
-📝 TEXTE AMÉLIORÉ:
-[texte]
+**Format de réponse:**
 
-✨ AMÉLIORATIONS:
-[liste]"""
-            }
-        ])
+📝 **TEXTE AMÉLIORÉ:**
+[Écris ici le texte corrigé et amélioré complet]
 
+✨ **PRINCIPALES AMÉLIORATIONS:**
+[Liste les améliorations apportées avec explications]
+
+📊 **STATISTIQUES:**
+[Nombre de corrections effectuées]
+
+Réponds en français."""
+
+        result = call_ai(prompt)
         return jsonify({'result': result, 'success': True})
-
+        
     except Exception as e:
         print(f'Erreur amélioration: {str(e)}')
         return jsonify({'error': str(e), 'success': False}), 500
@@ -174,14 +148,16 @@ def health():
     """Health check"""
     return jsonify({
         'status': 'ok',
-        'api_configured': bool(OPENROUTER_API_KEY)
+        'api_configured': bool(GOOGLE_API_KEY),
+        'model': 'gemini-1.5-flash'
     })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print('=' * 50)
     print('🚀 AnalyseLingFR Starting...')
+    print('🤖 Powered by Google Gemini AI')
     print(f'📡 Port: {port}')
-    print(f'🔑 API Key: {"✅ Configured" if OPENROUTER_API_KEY else "❌ Missing"}')
+    print(f'🔑 Google API: {"✅ Configured" if GOOGLE_API_KEY else "❌ Missing"}')
     print('=' * 50)
     app.run(host='0.0.0.0', port=port, debug=False)
