@@ -388,35 +388,56 @@
             document.getElementById('loader').classList.add('hidden');
         }
 
-        async function callAI(prompt) {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                    'HTTP-Referer': window.location.href,
-                    'X-Title': 'AnalyseLingFR'
-                },
-                body: JSON.stringify({
-                    model: MODEL,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'Tu es un expert en linguistique française. Tu analyses et améliores des textes en français avec précision et professionnalisme.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    max_tokens: 2000,
-                    temperature: 0.7
-                })
-            });
+   async function callAI(prompt) {
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                'HTTP-Referer': window.location.href,
+                'X-Title': 'AnalyseLingFR'
+            },
+            body: JSON.stringify({
+                model: MODEL,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Tu es un expert en linguistique française.'
+                    },
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ],
+                max_tokens: 2000,
+                temperature: 0.7
+            })
+        });
 
-            const data = await response.json();
-            return data.choices[0].message.content;
+        // تحقق من نجاح الطلب
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('API Error:', errorData);
+            throw new Error(`Erreur API: ${response.status} - ${errorData.error?.message || 'Erreur inconnue'}`);
         }
+
+        const data = await response.json();
+        
+        // تحقق من وجود النتيجة
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            console.error('Réponse inattendue:', data);
+            throw new Error('Réponse API invalide');
+        }
+
+        return data.choices[0].message.content;
+        
+    } catch (error) {
+        console.error('Erreur complète:', error);
+        throw new Error(`Impossible de contacter l'IA: ${error.message}`);
+    }
+}
+
 
         async function analyzeText() {
             const text = document.getElementById('analyzeText').value.trim();
