@@ -9,7 +9,7 @@ CORS(app)
 # قراءة المفتاح من Environment Variable
 OPENROUTER_API_KEY = os.environ.get('OPENROUTER_API_KEY')
 API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-MODEL = 'meta-llama/llama-3.2-3b-instruct:free'  # ✅ Llama 3.2!
+MODEL = 'meta-llama/llama-3.2-3b-instruct:free'
 
 def call_ai(messages):
     """استدعاء Llama 3.2 عبر OpenRouter API"""
@@ -210,8 +210,8 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print('=' * 70)
     print('🚀 AnalyseLingFR Starting...')
-    print('🤖 Powered by Meta Llama 3.2 via OpenRouter')
+    print('🤖 Powered by Advanced Linguistic Algorithms')
     print(f'📡 Port: {port}')
-    print(f'🔑 OpenRouter API: {"✅ Configured" if OPENROUTER_API_KEY else "❌ Missing"}')
+    print(f'🔑 API: {"✅ OK" if OPENROUTER_API_KEY else "❌ Missing"}')
     print('=' * 70)
     app.run(host='0.0.0.0', port=port, debug=False)
