@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnalyseLingFR - Analyse Linguistique Française</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #2C3E50; line-height: 1.6; min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .header { background: white; box-shadow: 0 5px 20px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; padding: 1rem 0; }
+        .header .container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 1.5rem; font-weight: 700; color: #6C63FF; }
+        .logo i { font-size: 2rem; }
+        .logo span { color: #4CAF50; }
+        .nav { display: flex; gap: 2rem; flex-wrap: wrap; }
+        .nav-link { text-decoration: none; color: #2C3E50; font-weight: 500; transition: color 0.3s; }
+        .nav-link:hover { color: #6C63FF; }
+        .hero { background: linear-gradient(135deg, rgba(108, 99, 255, 0.95), rgba(118, 75, 162, 0.95)); color: white; padding: 4rem 0; text-align: center; }
+        .hero-title { font-size: 2.5rem; margin-bottom: 1rem; animation: fadeIn 0.8s; }
+        .hero-subtitle { font-size: 1.2rem; opacity: 0.95; animation: fadeIn 1s; }
+        .section { padding: 4rem 0; background: white; }
+        .section:nth-child(even) { background: #F8F9FA; }
+        .section-title { text-align: center; font-size: 2rem; color: #6C63FF; margin-bottom: 2rem; }
+        .form-card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2C3E50; }
+        .form-group textarea { width: 100%; padding: 1rem; border: 2px solid #E0E0E0; border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 1rem; transition: border-color 0.3s; resize: vertical; }
+        .form-group textarea:focus { outline: none; border-color: #6C63FF; }
+        .btn { padding: 1rem 2rem; border: none; border-radius: 50px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 0.5rem; margin: 0.5rem; }
+        .btn-primary { background: linear-gradient(135deg, #6C63FF, #764ba2); color: white; }
+        .btn-secondary { background: linear-gradient(135deg, #4CAF50, #45a049); color: white; }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .results { margin-top: 2rem; padding: 2rem; background: #F8F9FA; border-radius: 15px; }
+        .results.hidden { display: none; }
+        .result-box { background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #6C63FF; }
+        .alert-error { padding: 1rem; background: #ffebee; color: #c62828; border-radius: 10px; border-left: 4px solid #c62828; }
+        .loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .loader.hidden { display: none; }
+        .spinner { width: 60px; height: 60px; border: 5px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; }
+        .footer { background: #2C3E50; color: white; padding: 3rem 0 1rem; margin-top: 4rem; }
+        .footer-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 2rem; }
+        .footer-section h3, .footer-section h4 { color: #6C63FF; margin-bottom: 1rem; }
+        .footer-section p { margin: 0.5rem 0; opacity: 0.9; }
+        .footer-bottom { text-align: center; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); opacity: 0.7; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @media (max-width: 768px) { .hero-title { font-size: 1.8rem; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo"><i class="fas fa-language"></i><h1>AnalyseLing<span>FR</span></h1></div>
+            <nav class="nav">
+                <a href="#analyse" class="nav-link">Analyse</a>
+                <a href="#plagiat" class="nav-link">Plagiat</a>
+                <a href="#amelioration" class="nav-link">Amélioration</a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h2 class="hero-title">Analyseur Linguistique Français Intelligent</h2>
+            <p class="hero-subtitle">Analyse et amélioration de textes propulsés par DeepSeek AI</p>
+        </div>
+    </section>
+
+    <section id="analyse" class="section">
+        <div class="container">
+            <h2 class="section-title"><i class="fas fa-microscope"></i> Analyse Linguistique</h2>
+            <div class="form-card">
+                <div class="form-group">
+                    <label><i class="fas fa-edit"></i> Entrez votre texte en français</label>
+                    <textarea id="analyzeText" rows="8" placeholder="Saisissez votre texte..."></textarea>
+                </div>
+                <button onclick="analyzeText()" class="btn btn-primary"><i class="fas fa-search"></i> Analyser</button>
+                <div id="analyzeResults" class="results hidden"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="plagiat" class="section">
+        <div class="container">
+            <h2 class="section-title"><i class="fas fa-copy"></i> Détection de Plagiat</h2>
+            <div class="form-card">
+                <div class="form-group">
+                    <label><i class="fas fa-file-alt"></i> Texte 1</label>
+                    <textarea id="text1" rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-file-alt"></i> Texte 2</label>
+                    <textarea id="text2" rows="6"></textarea>
+                </div>
+                <button onclick="checkPlagiarism()" class="btn btn-primary"><i class="fas fa-search-plus"></i> Vérifier</button>
+                <div id="plagiarismResults" class="results hidden"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="amelioration" class="section">
+        <div class="container">
+            <h2 class="section-title"><i class="fas fa-magic"></i> Amélioration</h2>
+            <div class="form-card">
+                <div class="form-group">
+                    <label><i class="fas fa-edit"></i> Texte à améliorer</label>
+                    <textarea id="improveText" rows="8"></textarea>
+                </div>
+                <button onclick="improveText()" class="btn btn-secondary"><i class="fas fa-wand-magic-sparkles"></i> Améliorer</button>
+                <div id="improveResults" class="results hidden"></div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3><i class="fas fa-language"></i> AnalyseLingFR</h3>
+                    <p>Application d'analyse linguistique française</p>
+                </div>
+                <div class="footer-section">
+                    <h4><i class="fas fa-user-graduate"></i> Développeur</h4>
+                    <p><strong>Bettahar Abdelkrim</strong></p>
+                    <p>Master Sciences du Langage</p>
+                </div>
+                <div class="footer-section">
+                    <h4><i class="fas fa-university"></i> Institution</h4>
+                    <p>Université de Mostaganem</p>
+                    <p>Algérie 🇩🇿</p>
+                </div>
+                <div class="footer-section">
+                    <h4><i class="fas fa-calendar"></i> Année</h4>
+                    <p>2024-2025</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 AnalyseLingFR</p>
+            </div>
+        </div>
+    </footer>
+
+    <div id="loader" class="loader hidden">
+        <div class="spinner"></div>
+        <p style="color: white; margin-top: 1rem;">Traitement...</p>
+    </div>
+
+    <script>
+        function showLoader() { document.getElementById('loader').classList.remove('hidden'); }
+        function hideLoader() { document.getElementById('loader').classList.add('hidden'); }
+
+        async function analyzeText() {
+            const text = document.getElementById('analyzeText').value.trim();
+            const resultsDiv = document.getElementById('analyzeResults');
+            if (!text) { alert('Entrez un texte'); return; }
+            showLoader();
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    resultsDiv.innerHTML = `<div class="result-box"><h3 style="color: #6C63FF;"><i class="fas fa-brain"></i> Analyse</h3><div style="white-space: pre-wrap;">${data.result}</div></div>`;
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert-error">${data.error}</div>`;
+                }
+                resultsDiv.classList.remove('hidden');
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert-error">Erreur: ${error.message}</div>`;
+                resultsDiv.classList.remove('hidden');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        async function checkPlagiarism() {
+            const text1 = document.getElementById('text1').value.trim();
+            const text2 = document.getElementById('text2').value.trim();
+            const resultsDiv = document.getElementById('plagiarismResults');
+            if (!text1 || !text2) { alert('Entrez les deux textes'); return; }
+            showLoader();
+            try {
+                const response = await fetch('/api/plagiarism', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text1, text2 })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    resultsDiv.innerHTML = `<div class="result-box"><h3 style="color: #FF5252;"><i class="fas fa-exclamation-triangle"></i> Résultat</h3><div style="white-space: pre-wrap;">${data.result}</div></div>`;
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert-error">${data.error}</div>`;
+                }
+                resultsDiv.classList.remove('hidden');
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert-error">Erreur: ${error.message}</div>`;
+                resultsDiv.classList.remove('hidden');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        async function improveText() {
+            const text = document.getElementById('improveText').value.trim();
+            const resultsDiv = document.getElementById('improveResults');
+            if (!text) { alert('Entrez un texte'); return; }
+            showLoader();
+            try {
+                const response = await fetch('/api/improve', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    resultsDiv.innerHTML = `<div class="result-box"><h3 style="color: #4CAF50;"><i class="fas fa-sparkles"></i> Amélioré</h3><div style="white-space: pre-wrap; background: #E8F5E9; padding: 1.5rem; border-radius: 10px;">${data.result}</div></div>`;
+                } else {
+                    resultsDiv.innerHTML = `<div class="alert-error">${data.error}</div>`;
+                }
+                resultsDiv.classList.remove('hidden');
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="alert-error">Erreur: ${error.message}</div>`;
+                resultsDiv.classList.remove('hidden');
+            } finally {
+                hideLoader();
+            }
+        }
+
+        document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+            e.preventDefault();
+            document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+        }));
+
+        console.log('✅ AnalyseLingFR chargé');
+    </script>
+</body>
+</html>
