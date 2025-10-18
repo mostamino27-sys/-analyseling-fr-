@@ -32,9 +32,13 @@
         .btn-primary { background: linear-gradient(135deg, #6C63FF, #764ba2); color: white; }
         .btn-secondary { background: #4CAF50; color: white; }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         .results { margin-top: 2rem; padding: 2rem; background: #F8F9FA; border-radius: 15px; }
         .results.hidden { display: none; }
         .result-box { background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 1rem; border-left: 4px solid #6C63FF; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
+        .alert { padding: 1rem; border-radius: 10px; margin-bottom: 1rem; }
+        .alert-error { background: #ffebee; color: #c62828; border-left: 4px solid #c62828; }
+        .alert-warning { background: #fff3e0; color: #ef6c00; border-left: 4px solid #ef6c00; }
         .footer { background: #2C3E50; color: white; padding: 3rem 0 1rem; margin-top: 4rem; }
         .footer-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin-bottom: 2rem; }
         .footer-section h3, .footer-section h4 { color: #6C63FF; margin-bottom: 1rem; }
@@ -71,6 +75,10 @@
         <div class="container">
             <h2 class="section-title"><i class="fas fa-microscope"></i> Analyse Linguistique</h2>
             <div class="form-card">
+                <div id="apiWarning" class="alert alert-warning" style="display:none;">
+                    <strong><i class="fas fa-exclamation-triangle"></i> Configuration requise:</strong>
+                    Veuillez configurer votre clé API OpenRouter dans le code JavaScript (ligne 110) ou utiliser la version Railway avec variables d'environnement.
+                </div>
                 <div class="form-group">
                     <label><i class="fas fa-edit"></i> Entrez votre texte en français</label>
                     <textarea id="analyzeText" rows="8" placeholder="Saisissez votre texte français ici pour une analyse complète..."></textarea>
@@ -140,7 +148,7 @@
             </div>
             <div class="footer-bottom">
                 <p>&copy; 2025 AnalyseLingFR - Tous droits réservés</p>
-                <p>Propulsé par DeepSeek AI & OpenRouter</p>
+                <p>Propulsé par DeepSeek AI via OpenRouter</p>
             </div>
         </div>
     </footer>
@@ -151,16 +159,26 @@
     </div>
 
     <script>
-        const OPENROUTER_API_KEY = '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';
+        // 🔒 IMPORTANT: NE JAMAIS mettre votre clé API ici dans un dépôt public!
+        // Utilisez Railway avec Environment Variables ou la protection Referrer
+        const OPENROUTER_API_KEY = 'YOUR_API_KEY_HERE';
         const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
         const MODEL = 'deepseek/deepseek-r1:free';
+
+        // Vérifier la configuration au chargement
+        window.addEventListener('DOMContentLoaded', function() {
+            if (OPENROUTER_API_KEY === 'YOUR_API_KEY_HERE') {
+                document.getElementById('apiWarning').style.display = 'block';
+                console.warn('⚠️ Clé API non configurée. Configurez OPENROUTER_API_KEY ou utilisez Railway.');
+            }
+        });
 
         function showLoader() { document.getElementById('loader').classList.remove('hidden'); }
         function hideLoader() { document.getElementById('loader').classList.add('hidden'); }
 
         async function callAI(prompt) {
             if (OPENROUTER_API_KEY === 'YOUR_API_KEY_HERE') {
-                throw new Error('⚠️ Configurez votre clé API OpenRouter (ligne 110)');
+                throw new Error('⚠️ Clé API non configurée. Veuillez configurer votre clé OpenRouter ou utiliser la version Railway.');
             }
             try {
                 const response = await fetch(API_URL, {
@@ -174,7 +192,7 @@
                     body: JSON.stringify({
                         model: MODEL,
                         messages: [
-                            { role: 'system', content: 'Tu es un expert en linguistique française.' },
+                            { role: 'system', content: 'Tu es un expert en linguistique française. Tu analyses et améliores des textes en français avec précision et professionnalisme.' },
                             { role: 'user', content: prompt }
                         ],
                         max_tokens: 2000,
@@ -183,29 +201,32 @@
                 });
                 if (!response.ok) {
                     const err = await response.json().catch(() => ({}));
-                    if (response.status === 401) throw new Error('❌ Clé API invalide - Vérifiez sur openrouter.ai/keys');
-                    if (response.status === 429) throw new Error('⏳ Limite atteinte - Réessayez dans 1 minute');
-                    throw new Error(`❌ Erreur ${response.status}`);
+                    if (response.status === 401) throw new Error('❌ Clé API invalide ou expirée. Vérifiez votre clé sur openrouter.ai/keys');
+                    if (response.status === 429) throw new Error('⏳ Limite de requêtes atteinte. Réessayez dans quelques minutes.');
+                    if (response.status === 403) throw new Error('🔒 Accès refusé. Vérifiez les paramètres Referrer de votre clé API.');
+                    throw new Error(`❌ Erreur ${response.status}: ${err.error?.message || 'Inconnue'}`);
                 }
                 const data = await response.json();
-                if (!data.choices?.[0]?.message?.content) throw new Error('❌ Réponse invalide');
+                if (!data.choices?.[0]?.message?.content) throw new Error('❌ Réponse API invalide');
                 return data.choices[0].message.content;
             } catch (error) {
-                console.error('Erreur:', error);
+                console.error('Erreur complète:', error);
                 throw error;
             }
         }
 
         async function analyzeText() {
             const text = document.getElementById('analyzeText').value.trim();
-            if (!text) return alert('Veuillez entrer un texte.');
+            const resultsDiv = document.getElementById('analyzeResults');
+            if (!text) { alert('Veuillez entrer un texte à analyser.'); return; }
             showLoader();
             try {
-                const result = await callAI(`Analyse détaillée de ce texte français:\n\n1. Thème principal\n2. Ton et style\n3. Richesse vocabulaire\n4. Points forts\n5. Suggestions d'amélioration\n6. Niveau de langue\n\nTexte:\n${text}\n\nRéponds en français de manière structurée.`);
-                document.getElementById('analyzeResults').innerHTML = `<div class="result-box"><h3 style="color: #6C63FF;"><i class="fas fa-brain"></i> Analyse IA Complète</h3><div style="white-space: pre-wrap; line-height: 1.8;">${result}</div></div>`;
-                document.getElementById('analyzeResults').classList.remove('hidden');
+                const result = await callAI(`Analyse détaillée de ce texte français:\n\n1. Thème principal\n2. Ton et style d'écriture\n3. Richesse du vocabulaire\n4. Points forts\n5. Suggestions d'amélioration\n6. Niveau de langue (formel/informel)\n\nTexte:\n${text}\n\nRéponds de manière structurée et claire en français.`);
+                resultsDiv.innerHTML = `<div class="result-box"><h3 style="color: #6C63FF; margin-bottom: 1rem;"><i class="fas fa-brain"></i> Analyse IA Complète</h3><div style="white-space: pre-wrap; line-height: 1.8;">${result}</div></div>`;
+                resultsDiv.classList.remove('hidden');
             } catch (error) {
-                alert('❌ ' + error.message);
+                resultsDiv.innerHTML = `<div class="alert alert-error"><strong><i class="fas fa-exclamation-circle"></i> Erreur:</strong> ${error.message}</div>`;
+                resultsDiv.classList.remove('hidden');
             } finally {
                 hideLoader();
             }
@@ -214,14 +235,16 @@
         async function checkPlagiarism() {
             const text1 = document.getElementById('text1').value.trim();
             const text2 = document.getElementById('text2').value.trim();
-            if (!text1 || !text2) return alert('Entrez les deux textes.');
+            const resultsDiv = document.getElementById('plagiarismResults');
+            if (!text1 || !text2) { alert('Veuillez entrer les deux textes à comparer.'); return; }
             showLoader();
             try {
-                const result = await callAI(`Compare ces deux textes français:\n\nTexte 1:\n${text1}\n\nTexte 2:\n${text2}\n\nFournis:\n1. Score de similarité (%)\n2. Similitudes détectées\n3. Passages similaires\n4. Conclusion sur plagiat`);
-                document.getElementById('plagiarismResults').innerHTML = `<div class="result-box"><h3 style="color: #FF5252;"><i class="fas fa-exclamation-triangle"></i> Résultat</h3><div style="white-space: pre-wrap; line-height: 1.8;">${result}</div></div>`;
-                document.getElementById('plagiarismResults').classList.remove('hidden');
+                const result = await callAI(`Compare ces deux textes français et détermine le niveau de similarité:\n\nTexte 1:\n${text1}\n\nTexte 2:\n${text2}\n\nFournis:\n1. Score de similarité en pourcentage (0-100%)\n2. Similitudes détectées\n3. Passages similaires\n4. Conclusion sur plagiat\n\nRéponds en français de manière structurée.`);
+                resultsDiv.innerHTML = `<div class="result-box"><h3 style="color: #FF5252; margin-bottom: 1rem;"><i class="fas fa-exclamation-triangle"></i> Résultat de la Vérification</h3><div style="white-space: pre-wrap; line-height: 1.8;">${result}</div></div>`;
+                resultsDiv.classList.remove('hidden');
             } catch (error) {
-                alert('❌ ' + error.message);
+                resultsDiv.innerHTML = `<div class="alert alert-error"><strong><i class="fas fa-exclamation-circle"></i> Erreur:</strong> ${error.message}</div>`;
+                resultsDiv.classList.remove('hidden');
             } finally {
                 hideLoader();
             }
@@ -229,14 +252,16 @@
 
         async function improveText() {
             const text = document.getElementById('improveText').value.trim();
-            if (!text) return alert('Entrez un texte à améliorer.');
+            const resultsDiv = document.getElementById('improveResults');
+            if (!text) { alert('Veuillez entrer un texte à améliorer.'); return; }
             showLoader();
             try {
-                const result = await callAI(`Améliore ce texte français:\n1. Corrige erreurs\n2. Enrichis vocabulaire\n3. Améliore structure\n4. Garde le sens\n\nTexte:\n${text}\n\nFournis le texte amélioré + explications.`);
-                document.getElementById('improveResults').innerHTML = `<div class="result-box"><h3 style="color: #4CAF50;"><i class="fas fa-sparkles"></i> Texte Amélioré</h3><div style="white-space: pre-wrap; line-height: 1.8; background: #E8F5E9; padding: 1.5rem; border-radius: 10px;">${result}</div></div>`;
-                document.getElementById('improveResults').classList.remove('hidden');
+                const result = await callAI(`Améliore ce texte français en:\n1. Corrigeant toutes les erreurs grammaticales et orthographiques\n2. Enrichissant le vocabulaire\n3. Améliorant la structure et la fluidité\n4. Gardant le sens original\n\nTexte original:\n${text}\n\nFournis:\n1. Le texte amélioré complet\n2. Une brève explication des améliorations`);
+                resultsDiv.innerHTML = `<div class="result-box"><h3 style="color: #4CAF50; margin-bottom: 1rem;"><i class="fas fa-sparkles"></i> Texte Amélioré</h3><div style="white-space: pre-wrap; line-height: 1.8; background: #E8F5E9; padding: 1.5rem; border-radius: 10px;">${result}</div></div>`;
+                resultsDiv.classList.remove('hidden');
             } catch (error) {
-                alert('❌ ' + error.message);
+                resultsDiv.innerHTML = `<div class="alert alert-error"><strong><i class="fas fa-exclamation-circle"></i> Erreur:</strong> ${error.message}</div>`;
+                resultsDiv.classList.remove('hidden');
             } finally {
                 hideLoader();
             }
@@ -247,7 +272,9 @@
             document.querySelector(a.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
         }));
 
-        console.log('✅ AnalyseLingFR avec DeepSeek chargé!');
+        console.log('✅ AnalyseLingFR chargé - Version sécurisée');
+        console.log('🔒 Pour production: utilisez Railway avec Environment Variables');
+        console.log('📖 Documentation: https://github.com/mostamino27-sys-/analyseling-fr-');
     </script>
 </body>
 </html>
